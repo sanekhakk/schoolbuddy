@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Loader2 } from 'lucide-react'
 
-const API = 'http://localhost:5000/api'
+const API = import.meta.env.VITE_API_URL;
 
 export default function BoardPage() {
   const { boardSlug } = useParams()

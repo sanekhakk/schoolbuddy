@@ -6,7 +6,7 @@ import {
   LogOut, Plus, Pencil, Trash2, X, Loader2, ChevronDown, Check
 } from 'lucide-react'
 
-const API = 'http://localhost:5000/api'
+const API = import.meta.env.VITE_API_URL;
 
 function authHeaders() {
   return {

@@ -4,7 +4,7 @@ import { Search, Sparkles, BookOpen, Loader2 } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import AdSlot from '../../components/common/AdSlot.jsx'
 
-const API = 'http://localhost:5000/api'
+const API = import.meta.env.VITE_API_URL;
 
 function useFetch(url) {
   const [data, setData] = useState([])
