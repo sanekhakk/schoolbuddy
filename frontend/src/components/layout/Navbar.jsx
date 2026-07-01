@@ -6,7 +6,6 @@ import { useTheme } from '../../context/ThemeContext.jsx'
 const NAV_LINKS = [
   { label: 'CBSE', to: '/board/cbse' },
   { label: 'ICSE', to: '/board/icse' },
-  { label: 'Kerala Board', to: '/board/kerala' },
   { label: 'Search', to: '/search' }
 ]
 
