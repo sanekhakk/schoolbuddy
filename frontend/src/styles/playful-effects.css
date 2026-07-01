@@ -1,0 +1,95 @@
+/* SchoolBuddy — Playful Effects
+   Shared keyframes + utility classes for the kid-friendly UI refresh.
+   Import this once in every page: import '../../styles/playful-effects.css' */
+
+@keyframes sb-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+@keyframes sb-float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-16px) rotate(-3deg); }
+}
+@keyframes sb-pop-in {
+  0% { opacity: 0; transform: translateY(14px) scale(0.94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sb-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+@keyframes sb-shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes sb-dash {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes sb-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 111, 165, 0.35); }
+  50% { box-shadow: 0 0 0 10px rgba(255, 111, 165, 0); }
+}
+
+.sb-float { animation: sb-float 5s ease-in-out infinite; }
+.sb-float-slow { animation: sb-float-slow 7s ease-in-out infinite; }
+
+.sb-pop-in { animation: sb-pop-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.sb-pop-1 { animation-delay: 0.05s; }
+.sb-pop-2 { animation-delay: 0.1s; }
+.sb-pop-3 { animation-delay: 0.15s; }
+.sb-pop-4 { animation-delay: 0.2s; }
+.sb-pop-5 { animation-delay: 0.25s; }
+.sb-pop-6 { animation-delay: 0.3s; }
+
+.sb-card {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+}
+.sb-card:hover {
+  transform: translateY(-6px) rotate(-0.6deg) scale(1.02);
+}
+.sb-card:active {
+  transform: translateY(-2px) scale(0.99);
+}
+
+.sb-wiggle-hover:hover {
+  animation: sb-wiggle 0.5s ease-in-out;
+}
+
+.sb-shimmer {
+  background: linear-gradient(90deg, #eef1f8 0px, #f8f5ee 40px, #eef1f8 80px);
+  background-size: 800px 100%;
+  animation: sb-shimmer 1.6s linear infinite;
+}
+
+.sb-pulse-glow {
+  animation: sb-pulse-glow 2.2s ease-in-out infinite;
+}
+
+.sb-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sb-trail-path {
+  stroke-dasharray: 8 10;
+  stroke-dashoffset: 400;
+  animation: sb-dash 2.4s ease forwards;
+}
+
+.sb-display {
+  font-family: 'Baloo 2', 'Nunito', ui-rounded, system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-float, .sb-float-slow, .sb-pop-in, .sb-wiggle-hover:hover, .sb-shimmer, .sb-pulse-glow, .sb-trail-path {
+    animation: none !important;
+  }
+  .sb-card:hover {
+    transform: none;
+  }
+}
