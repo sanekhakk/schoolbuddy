@@ -11,7 +11,7 @@ export default function PearlXStrip() {
       href="https://www.pearlx.in"
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center justify-center gap-2 bg-gradient-to-r from-[#3FA9F5] via-[#A66CFF] to-[#FF6FA5] px-4 py-2 text-center text-xs sm:text-sm font-bold text-white"
+      className="group flex items-center justify-center gap-2 bg-gradient-to-r from-[#1a5986] via-[#5b3594] to-[#9c3259] px-4 py-2 text-center text-xs sm:text-sm font-bold text-white"
     >
       <Gem size={14} className="shrink-0 sb-wiggle-hover" />
       <span className="truncate">
