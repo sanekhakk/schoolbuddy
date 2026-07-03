@@ -10,7 +10,8 @@ export const Board = mongoose.model('Board', new Schema({
 export const Class = mongoose.model('Class', new Schema({
   boardId: { type: Schema.Types.ObjectId, ref: 'Board', required: true },
   className: { type: String, required: true },
-  slug: { type: String, required: true }
+  slug: { type: String, required: true },
+  order: { type: Number, default: 0 } // controls display order within a board (Class 1, Class 2, ...)
 }, { timestamps: true }))
 
 export const Subject = mongoose.model('Subject', new Schema({

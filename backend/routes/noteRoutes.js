@@ -4,10 +4,35 @@ import { requireAuth } from '../middleware/auth.js'
 
 const router = Router()
 
-// Public: published notes for homepage
+// Public: published notes for homepage with slugs for URL building
 router.get('/published', async (req, res) => {
-  const notes = await Note.find({ status: 'published' }).sort({ createdAt: -1 }).limit(20)
-  res.json(notes)
+  try {
+    const notes = await Note.find({ status: 'published' }).sort({ createdAt: -1 }).limit(20)
+    const enriched = await Promise.all(notes.map(async (note) => {
+      const [board, klass, subject, chapter] = await Promise.all([
+        Board.findById(note.boardId).select('slug name'),
+        Class.findById(note.classId).select('slug className'),
+        Subject.findById(note.subjectId).select('slug subjectName'),
+        Chapter.findById(note.chapterId).select('slug chapterName'),
+      ])
+      return {
+        _id: note._id,
+        title: note.title,
+        summary: note.summary,
+        views: note.views,
+        boardSlug: board?.slug,
+        classSlug: klass?.slug,
+        subjectSlug: subject?.slug,
+        chapterSlug: chapter?.slug,
+        boardName: board?.name,
+        className: klass?.className,
+        subjectName: subject?.subjectName,
+      }
+    }))
+    res.json(enriched)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
 })
 
 // Public: search

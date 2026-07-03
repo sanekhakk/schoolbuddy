@@ -10,6 +10,11 @@ import noteRoutes from './routes/noteRoutes.js'
 
 const app = express()
 
+// Render (and most hosts) sit behind a reverse proxy that sets X-Forwarded-For.
+// Without this, express-rate-limit can't trust that header and throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+// '1' = trust the first hop (the platform's proxy) — safe default for Render/Heroku/etc.
+app.set('trust proxy', 1)
+
 app.use(express.json({ limit: '2mb' }))
 app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }))
 
@@ -30,4 +35,4 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ message: err.message || 'Server error' })
 })
 
-export default app
+export default app;
