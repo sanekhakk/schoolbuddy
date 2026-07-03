@@ -19,5 +19,89 @@ body {
   box-shadow: 0 12px 24px -8px rgba(11, 31, 63, 0.25);
 }
 
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: #2E9BD6; border-radius: 8px; }
+
+/* ── Note content (Markdown rendered output) ────────────────────────────── */
+.note-content { font-size: 0.95rem; line-height: 1.8; color: inherit; }
+
+.note-content h1 { font-size: 1.6rem; font-weight: 800; margin: 1.5rem 0 0.75rem; border-bottom: 2px solid #2E9BD6; padding-bottom: 0.3rem; }
+.note-content h2 { font-size: 1.3rem; font-weight: 700; margin: 1.4rem 0 0.6rem; color: #2E9BD6; }
+.note-content h3 { font-size: 1.1rem; font-weight: 700; margin: 1.2rem 0 0.5rem; color: #F2547D; }
+.note-content h4, .note-content h5 { font-size: 1rem; font-weight: 600; margin: 1rem 0 0.4rem; }
+
+.note-content p  { margin-bottom: 0.9rem; }
+
+.note-content strong { font-weight: 700; color: #0B1F3F; }
+.dark .note-content strong { color: #fff; }
+.note-content em { font-style: italic; color: #7B5CD6; }
+
+.note-content ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.9rem; }
+.note-content ol { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.9rem; }
+.note-content li { margin-bottom: 0.35rem; }
+
+.note-content blockquote {
+  border-left: 4px solid #2E9BD6;
+  background: #EEF1F7;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+  font-style: italic;
+  color: #33476B;
+}
+.dark .note-content blockquote { background: #0F2A52; color: #D7DEEC; }
+
+.note-content code {
+  background: #EEF1F7;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  color: #F2547D;
+}
+.dark .note-content code { background: #0F2A52; color: #FF8CA8; }
+
+.note-content pre {
+  background: #0B1F3F;
+  color: #D7DEEC;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+.note-content pre code { background: none; color: inherit; padding: 0; }
+
+/* ── TABLES ─────────────────────────────────────────────────────────────── */
+.note-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 0.9rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px #D7DEEC;
+}
+.dark .note-content table { box-shadow: 0 0 0 1px #33476B; }
+
+.note-content thead { background: #2E9BD6; color: #fff; }
+.note-content thead th { padding: 0.65rem 1rem; text-align: left; font-weight: 700; }
+
+.note-content tbody tr:nth-child(even) { background: #F7F8FC; }
+.dark .note-content tbody tr:nth-child(even) { background: #0F2A52; }
+.note-content tbody tr:hover { background: #EEF1F7; }
+.dark .note-content tbody tr:hover { background: #121C33; }
+
+.note-content tbody td { padding: 0.6rem 1rem; border-bottom: 1px solid #D7DEEC; }
+.dark .note-content tbody td { border-bottom-color: #33476B; }
+
+.note-content img { max-width: 100%; border-radius: 0.75rem; margin: 1rem 0; }
+
+.note-content hr { border: none; border-top: 2px dashed #D7DEEC; margin: 1.5rem 0; }
+.dark .note-content hr { border-top-color: #33476B; }
+
+.note-content a { color: #2E9BD6; text-decoration: underline; }
+
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: #2E9BD6; border-radius: 8px; }

@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext.jsx'
 import {
   Sun, Moon, BookOpen, Layers, FolderOpen, FileText, Eye,
-  LogOut, Plus, Pencil, Trash2, X, Loader2, ChevronDown, Check
+  LogOut, Plus, Pencil, Trash2, X, Loader2, ChevronDown, Check,
+  ArrowUp, ArrowDown
 } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL;
+import API_BASE from '../../config/api.js'
+const API = API_BASE
 
 function authHeaders() {
   return {
@@ -172,14 +174,50 @@ function ClassesSection({ boards }) {
     try { await apiFetch(`/classes/${selected._id}`, { method: 'DELETE' }); setModal(null); load() } catch {}
   }
 
-  const boardName = (id) => boards.find(b => b._id === id)?.name || id
+  // Group classes by board, each group sorted by its manual "order" (falls back to className)
+  const grouped = useMemo(() => {
+    const map = new Map()
+    boards.forEach(b => map.set(b._id, { board: b, items: [] }))
+    classes.forEach(c => {
+      if (!map.has(c.boardId)) map.set(c.boardId, { board: null, items: [] })
+      map.get(c.boardId).items.push(c)
+    })
+    map.forEach(g => g.items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.className.localeCompare(b.className)))
+    return map
+  }, [boards, classes])
+
+  const moveClass = async (boardId, index, dir) => {
+    const group = grouped.get(boardId)
+    if (!group) return
+    const items = [...group.items]
+    const newIndex = index + dir
+    if (newIndex < 0 || newIndex >= items.length) return
+    ;[items[index], items[newIndex]] = [items[newIndex], items[index]]
+    try {
+      await apiFetch(`/classes/reorder/${boardId}`, { method: 'PUT', body: JSON.stringify({ orderedIds: items.map(c => c._id) }) })
+      load()
+    } catch {}
+  }
 
   return (
     <Section title="Classes" onAdd={openAdd} count={classes.length}>
-      {loading ? <Spinner /> : classes.map(c => (
-        <Row key={c._id} name={c.className} sub={`${boardName(c.boardId)} · ${c.slug}`}
-          onEdit={() => openEdit(c)} onDelete={() => openDelete(c)} />
-      ))}
+      {loading ? <Spinner /> : boards.map(b => {
+        const group = grouped.get(b._id)
+        if (!group || group.items.length === 0) return null
+        return (
+          <div key={b._id}>
+            <GroupLabel text={b.name} />
+            {group.items.map((c, i) => (
+              <Row key={c._id} name={c.className} sub={c.slug}
+                onEdit={() => openEdit(c)} onDelete={() => openDelete(c)}
+                onMoveUp={i > 0 ? () => moveClass(b._id, i, -1) : null}
+                onMoveDown={i < group.items.length - 1 ? () => moveClass(b._id, i, 1) : null}
+              />
+            ))}
+          </div>
+        )
+      })}
+      {!loading && classes.length === 0 && <EmptyRow text="No classes yet." />}
       {(modal === 'add' || modal === 'edit') && (
         <Modal title={modal === 'add' ? 'Add Class' : 'Edit Class'} onClose={() => setModal(null)}>
           {error && <ErrBox msg={error} />}
@@ -200,7 +238,7 @@ function ClassesSection({ boards }) {
 }
 
 // ─── SUBJECTS ────────────────────────────────────────────────────────────────
-function SubjectsSection({ classes }) {
+function SubjectsSection({ classes, boards }) {
   const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null)
@@ -237,14 +275,48 @@ function SubjectsSection({ classes }) {
     try { await apiFetch(`/subjects/${selected._id}`, { method: 'DELETE' }); setModal(null); load() } catch {}
   }
 
-  const className = (id) => classes.find(c => c._id === id)?.className || id
+  // Group subjects by board, then by class within each board
+  const grouped = useMemo(() => {
+    const byBoard = new Map()
+    boards.forEach(b => byBoard.set(b._id, { board: b, byClass: new Map() }))
+    classes.forEach(c => {
+      if (!byBoard.has(c.boardId)) byBoard.set(c.boardId, { board: null, byClass: new Map() })
+      byBoard.get(c.boardId).byClass.set(c._id, { cls: c, items: [] })
+    })
+    subjects.forEach(s => {
+      const cls = classes.find(c => c._id === s.classId)
+      const boardId = cls?.boardId
+      if (!byBoard.has(boardId)) byBoard.set(boardId, { board: null, byClass: new Map() })
+      const bg = byBoard.get(boardId)
+      if (!bg.byClass.has(s.classId)) bg.byClass.set(s.classId, { cls: cls || null, items: [] })
+      bg.byClass.get(s.classId).items.push(s)
+    })
+    return byBoard
+  }, [boards, classes, subjects])
 
   return (
     <Section title="Subjects" onAdd={openAdd} count={subjects.length}>
-      {loading ? <Spinner /> : subjects.map(s => (
-        <Row key={s._id} name={s.subjectName} sub={`${className(s.classId)} · ${s.slug}`}
-          onEdit={() => openEdit(s)} onDelete={() => openDelete(s)} />
-      ))}
+      {loading ? <Spinner /> : boards.map(b => {
+        const bg = grouped.get(b._id)
+        if (!bg) return null
+        const classGroups = [...bg.byClass.values()].filter(cg => cg.items.length > 0)
+        if (classGroups.length === 0) return null
+        return (
+          <div key={b._id}>
+            <GroupLabel text={b.name} />
+            {classGroups.map(cg => (
+              <div key={cg.cls?._id || 'unknown'}>
+                <GroupLabel text={cg.cls?.className || 'Unknown class'} sub />
+                {cg.items.map(s => (
+                  <Row key={s._id} name={s.subjectName} sub={s.slug}
+                    onEdit={() => openEdit(s)} onDelete={() => openDelete(s)} />
+                ))}
+              </div>
+            ))}
+          </div>
+        )
+      })}
+      {!loading && subjects.length === 0 && <EmptyRow text="No subjects yet." />}
       {(modal === 'add' || modal === 'edit') && (
         <Modal title={modal === 'add' ? 'Add Subject' : 'Edit Subject'} onClose={() => setModal(null)}>
           {error && <ErrBox msg={error} />}
@@ -265,7 +337,7 @@ function SubjectsSection({ classes }) {
 }
 
 // ─── CHAPTERS ────────────────────────────────────────────────────────────────
-function ChaptersSection({ subjects }) {
+function ChaptersSection({ subjects, classes, boards }) {
   const [chapters, setChapters] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null)
@@ -302,14 +374,55 @@ function ChaptersSection({ subjects }) {
     try { await apiFetch(`/chapters/${selected._id}`, { method: 'DELETE' }); setModal(null); load() } catch {}
   }
 
-  const subjectName = (id) => subjects.find(s => s._id === id)?.subjectName || id
+  // Group chapters by board, then class, then subject
+  const grouped = useMemo(() => {
+    const byBoard = new Map()
+    boards.forEach(b => byBoard.set(b._id, { board: b, byClass: new Map() }))
+    chapters.forEach(ch => {
+      const subj = subjects.find(s => s._id === ch.subjectId)
+      const cls = classes.find(c => c._id === subj?.classId)
+      const boardId = cls?.boardId
+      if (!byBoard.has(boardId)) byBoard.set(boardId, { board: null, byClass: new Map() })
+      const bg = byBoard.get(boardId)
+      if (!bg.byClass.has(cls?._id)) bg.byClass.set(cls?._id, { cls: cls || null, bySubject: new Map() })
+      const cg = bg.byClass.get(cls?._id)
+      if (!cg.bySubject.has(ch.subjectId)) cg.bySubject.set(ch.subjectId, { subj: subj || null, items: [] })
+      cg.bySubject.get(ch.subjectId).items.push(ch)
+    })
+    byBoard.forEach(bg => bg.byClass.forEach(cg => cg.bySubject.forEach(sg =>
+      sg.items.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0))
+    )))
+    return byBoard
+  }, [boards, classes, subjects, chapters])
 
   return (
     <Section title="Chapters" onAdd={openAdd} count={chapters.length}>
-      {loading ? <Spinner /> : chapters.map(c => (
-        <Row key={c._id} name={c.chapterName} sub={`${subjectName(c.subjectId)} · Ch ${c.chapterNumber || '?'}`}
-          onEdit={() => openEdit(c)} onDelete={() => openDelete(c)} />
-      ))}
+      {loading ? <Spinner /> : boards.map(b => {
+        const bg = grouped.get(b._id)
+        if (!bg) return null
+        const classGroups = [...bg.byClass.values()].filter(cg => [...cg.bySubject.values()].some(sg => sg.items.length > 0))
+        if (classGroups.length === 0) return null
+        return (
+          <div key={b._id}>
+            <GroupLabel text={b.name} />
+            {classGroups.map(cg => (
+              <div key={cg.cls?._id || 'unknown'}>
+                <GroupLabel text={cg.cls?.className || 'Unknown class'} sub />
+                {[...cg.bySubject.values()].filter(sg => sg.items.length > 0).map(sg => (
+                  <div key={sg.subj?._id || 'unknown'}>
+                    <GroupLabel text={sg.subj?.subjectName || 'Unknown subject'} sub2 />
+                    {sg.items.map(c => (
+                      <Row key={c._id} name={c.chapterName} sub={`Ch ${c.chapterNumber || '?'}`}
+                        onEdit={() => openEdit(c)} onDelete={() => openDelete(c)} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )
+      })}
+      {!loading && chapters.length === 0 && <EmptyRow text="No chapters yet." />}
       {(modal === 'add' || modal === 'edit') && (
         <Modal title={modal === 'add' ? 'Add Chapter' : 'Edit Chapter'} onClose={() => setModal(null)}>
           {error && <ErrBox msg={error} />}
@@ -377,13 +490,53 @@ function NotesSection({ boards, classes, subjects, chapters }) {
   const statusColor = { draft: 'text-orange', review: 'text-blue', published: 'text-green' }
   const chapterName = (id) => chapters.find(c => c._id === id)?.chapterName || id
 
+  // Group notes by board, then class, then subject (same hierarchy as Chapters)
+  const grouped = useMemo(() => {
+    const byBoard = new Map()
+    boards.forEach(b => byBoard.set(b._id, { board: b, byClass: new Map() }))
+    notes.forEach(n => {
+      const boardId = n.boardId
+      if (!byBoard.has(boardId)) byBoard.set(boardId, { board: null, byClass: new Map() })
+      const bg = byBoard.get(boardId)
+      const cls = classes.find(c => c._id === n.classId)
+      if (!bg.byClass.has(n.classId)) bg.byClass.set(n.classId, { cls: cls || null, bySubject: new Map() })
+      const cg = bg.byClass.get(n.classId)
+      const subj = subjects.find(s => s._id === n.subjectId)
+      if (!cg.bySubject.has(n.subjectId)) cg.bySubject.set(n.subjectId, { subj: subj || null, items: [] })
+      cg.bySubject.get(n.subjectId).items.push(n)
+    })
+    return byBoard
+  }, [boards, classes, subjects, notes])
+
   return (
     <Section title="Notes" onAdd={openAdd} count={notes.length} fullWidth>
-      {loading ? <Spinner /> : notes.map(n => (
-        <Row key={n._id} name={n.title}
-          sub={<span>{chapterName(n.chapterId)} · <span className={statusColor[n.status] || ''}>{n.status}</span></span>}
-          onEdit={() => openEdit(n)} onDelete={() => openDelete(n)} />
-      ))}
+      {loading ? <Spinner /> : boards.map(b => {
+        const bg = grouped.get(b._id)
+        if (!bg) return null
+        const classGroups = [...bg.byClass.values()].filter(cg => [...cg.bySubject.values()].some(sg => sg.items.length > 0))
+        if (classGroups.length === 0) return null
+        return (
+          <div key={b._id}>
+            <GroupLabel text={b.name} />
+            {classGroups.map(cg => (
+              <div key={cg.cls?._id || 'unknown'}>
+                <GroupLabel text={cg.cls?.className || 'Unknown class'} sub />
+                {[...cg.bySubject.values()].filter(sg => sg.items.length > 0).map(sg => (
+                  <div key={sg.subj?._id || 'unknown'}>
+                    <GroupLabel text={sg.subj?.subjectName || 'Unknown subject'} sub2 />
+                    {sg.items.map(n => (
+                      <Row key={n._id} name={n.title}
+                        sub={<span>{chapterName(n.chapterId)} · <span className={statusColor[n.status] || ''}>{n.status}</span></span>}
+                        onEdit={() => openEdit(n)} onDelete={() => openDelete(n)} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )
+      })}
+      {!loading && notes.length === 0 && <EmptyRow text="No notes yet." />}
       {(modal === 'add' || modal === 'edit') && (
         <Modal title={modal === 'add' ? 'Add Note' : 'Edit Note'} onClose={() => setModal(null)}>
           {error && <ErrBox msg={error} />}
@@ -451,24 +604,44 @@ function Section({ title, onAdd, count, children, fullWidth }) {
           <ChevronDown size={16} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
         </div>
       </div>
-      {open && <div className="divide-y divide-navy-100 dark:divide-navy-700 max-h-80 overflow-y-auto">{children}</div>}
+      {open && <div className="max-h-96 overflow-y-auto">{children}</div>}
     </div>
   )
 }
 
-function Row({ name, sub, onEdit, onDelete }) {
+function Row({ name, sub, onEdit, onDelete, onMoveUp, onMoveDown }) {
+  const hasMove = onMoveUp !== undefined || onMoveDown !== undefined
   return (
-    <div className="flex items-center justify-between px-5 py-3 hover:bg-surface dark:hover:bg-navy-700/20">
+    <div className="flex items-center justify-between px-5 py-3 pl-8 border-b border-navy-100 dark:border-navy-700 hover:bg-surface dark:hover:bg-navy-700/20">
       <div>
         <p className="text-sm font-medium">{name}</p>
-        <p className="text-xs text-navy-400 dark:text-navy-100">{sub}</p>
+        {sub && <p className="text-xs text-navy-400 dark:text-navy-100">{sub}</p>}
       </div>
-      <div className="flex gap-2">
+      <div className="flex items-center gap-1">
+        {hasMove && (
+          <>
+            <button onClick={onMoveUp} disabled={!onMoveUp} className="p-1.5 rounded-lg hover:bg-navy/10 disabled:opacity-25 disabled:cursor-not-allowed" title="Move up"><ArrowUp size={14} /></button>
+            <button onClick={onMoveDown} disabled={!onMoveDown} className="p-1.5 rounded-lg hover:bg-navy/10 disabled:opacity-25 disabled:cursor-not-allowed" title="Move down"><ArrowDown size={14} /></button>
+          </>
+        )}
         <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-blue/10 text-blue"><Pencil size={15} /></button>
         <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-pink/10 text-pink"><Trash2 size={15} /></button>
       </div>
     </div>
   )
+}
+
+// Sub-heading used to label a group of rows by its parent (board / class / subject)
+function GroupLabel({ text, sub, sub2 }) {
+  return (
+    <div className={`px-5 py-1.5 text-xs font-bold uppercase tracking-wide bg-surface dark:bg-navy-800/60 text-navy-400 dark:text-navy-100 sticky top-0 ${sub2 ? 'pl-8 !text-[10px]' : sub ? 'pl-6' : ''}`}>
+      {text}
+    </div>
+  )
+}
+
+function EmptyRow({ text }) {
+  return <div className="px-5 py-6 text-sm text-center text-navy-400 dark:text-navy-100">{text}</div>
 }
 
 function Spinner() {
@@ -547,8 +720,8 @@ export default function AdminDashboard() {
       <div className="px-6 pb-10 grid grid-cols-1 lg:grid-cols-2 gap-5">
         <BoardsSection />
         <ClassesSection boards={boards} />
-        <SubjectsSection classes={classes} />
-        <ChaptersSection subjects={subjects} />
+        <SubjectsSection classes={classes} boards={boards} />
+        <ChaptersSection subjects={subjects} classes={classes} boards={boards} />
         <NotesSection boards={boards} classes={classes} subjects={subjects} chapters={chapters} />
       </div>
     </div>

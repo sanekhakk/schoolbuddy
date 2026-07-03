@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext.jsx'
+import API from '../../config/api.js'
 import { Sun, Moon, Loader2 } from 'lucide-react'
 
 export default function AdminLogin() {
@@ -16,7 +17,7 @@ export default function AdminLogin() {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+      const res = await fetch(`${API}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
