@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { ThumbsUp, Share2, Eye, Loader2, AlertCircle } from 'lucide-react'
 import { marked } from 'marked'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 import AdSlot from '../../components/common/AdSlot.jsx'
 import API from '../../config/api.js'
 
@@ -12,14 +14,39 @@ marked.setOptions({
   gfm: true,       // GitHub Flavored Markdown — enables tables
 })
 
+// Pulls out $$...$$ (display) and $...$ (inline) LaTeX before markdown parsing,
+// renders each with KaTeX, and swaps in placeholders so `marked` never touches
+// the raw LaTeX (which would otherwise mangle underscores, braces, backslashes, etc).
+function extractMath(source) {
+  const blocks = []
+
+  const stash = (expr, displayMode) => {
+    const idx = blocks.length
+    try {
+      blocks.push(katex.renderToString(expr.trim(), { displayMode, throwOnError: false }))
+    } catch {
+      blocks.push(`<code>${expr}</code>`)
+    }
+    return `%%MATHBLOCK${idx}%%`
+  }
+
+  // Display math: $$ ... $$ (can span multiple lines)
+  let text = source.replace(/\$\$([\s\S]+?)\$\$/g, (_, expr) => stash(expr, true))
+  // Inline math: $ ... $ (single line only, so it doesn't eat unrelated $ signs)
+  text = text.replace(/\$([^\$\n]+?)\$/g, (_, expr) => stash(expr, false))
+
+  return { text, blocks }
+}
+
 function renderContent(content) {
   if (!content) return ''
+
+  let md
   if (typeof content === 'string') {
-    return marked.parse(content)
-  }
-  // EditorJS JSON blocks — convert to markdown then parse
-  if (content.blocks) {
-    const md = content.blocks.map(block => {
+    md = content
+  } else if (content.blocks) {
+    // EditorJS JSON blocks — convert to markdown first
+    md = content.blocks.map(block => {
       switch (block.type) {
         case 'header':    return `${'#'.repeat(block.data.level)} ${block.data.text}\n`
         case 'paragraph': return `${block.data.text}\n`
@@ -33,9 +60,17 @@ function renderContent(content) {
         default:          return ''
       }
     }).join('\n')
-    return marked.parse(md)
+  } else {
+    return ''
   }
-  return ''
+
+  // Pull LaTeX out first so markdown parsing can't mangle it, then splice back in.
+  const { text, blocks } = extractMath(md)
+  let html = marked.parse(text)
+  blocks.forEach((rendered, idx) => {
+    html = html.replace(`%%MATHBLOCK${idx}%%`, rendered)
+  })
+  return html
 }
 
 export default function ChapterPage() {
